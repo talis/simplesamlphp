@@ -85,10 +85,10 @@ class SimpleSAML_Utilities {
 	public static function isHTTPS() {
 
 		// Added AWS load balancer SSL header
-        if(isset($_SERVER['X-Forwarded-Proto']) && $_SERVER['X-Forwarded-Proto'] == 'https')
-        {
-            return true;
-        }
+                if(isset($_SERVER['X-Forwarded-Proto']) && $_SERVER['X-Forwarded-Proto'] == 'https')
+                {
+                    return true;
+                }
         
 		if(!array_key_exists('HTTPS', $_SERVER)) {
 			/* Not a https-request. */
