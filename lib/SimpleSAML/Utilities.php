@@ -84,7 +84,13 @@ class SimpleSAML_Utilities {
 	 */
 	public static function isHTTPS() {
 
-		// Added AWS load balancer SSL header
+		// Added AWS load balancer SSL header, we suspect that Apache rewrites
+		// X-Forwarded-Proto to HTTP_X_FORWARDED_PROTO but will keep both checks in
+		// for completeness. 
+		if(isset($_SERVER['X-Forwarded-Proto']) && $_SERVER['X-Forwarded-Proto'] == 'https')
+		{
+			return true;
+		}
 		if(isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')
 		{
 			return true;
