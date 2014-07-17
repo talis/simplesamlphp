@@ -63,18 +63,26 @@ class SimpleSAML_Utilities {
 		} else {
 			$protocol = 'http';
 		}
-		
-		$portnumber = $_SERVER["SERVER_PORT"];
-		$port = ':' . $portnumber;
-		if ($protocol == 'http') {
-			if ($portnumber == '80') $port = '';
-		} elseif ($protocol == 'https') {
-			if ($portnumber == '443') $port = '';
-		}
-			
-		$querystring = '';
-		return $protocol."://" . $currenthost . $port;
-	
+
+//      TAL-243, although the patch we added to isHTTPS() below
+//      stops simple samle redirecting to a http url, this method was
+//		adding the configured server port (:80) to the redirect url which
+//      results in a url that looks like https://users.talis.com:80.
+//      WE don't need the port number added to the URL at all for our purposes
+//      so commenting this out.
+//
+//		$portnumber = $_SERVER["SERVER_PORT"];
+//		$port = ':' . $portnumber;
+//		if ($protocol == 'http') {
+//			if ($portnumber == '80') $port = '';
+//		} elseif ($protocol == 'https') {
+//			if ($portnumber == '443') $port = '';
+//		}
+//
+//		$querystring = '';
+//		return $protocol."://" . $currenthost . $port;
+
+        return $protocol."://" . $currenthost;
 	}
 	
 	/**
