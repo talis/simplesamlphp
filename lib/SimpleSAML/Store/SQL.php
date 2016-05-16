@@ -3,8 +3,7 @@
 /**
  * A SQL datastore.
  *
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class SimpleSAML_Store_SQL extends SimpleSAML_Store {
 
@@ -92,7 +91,7 @@ class SimpleSAML_Store_SQL extends SimpleSAML_Store {
 	private function initKVTable() {
 
 		if ($this->getTableVersion('kvstore') === 1) {
-			/* Table initialized. */
+			// Table initialized
 			return;
 		}
 
@@ -168,7 +167,7 @@ class SimpleSAML_Store_SQL extends SimpleSAML_Store {
 			return;
 		}
 
-		/* Default implementation. Try INSERT, and UPDATE if that fails. */
+		// Default implementation. Try INSERT, and UPDATE if that fails.
 
 		$insertQuery = 'INSERT INTO ' . $table . ' ' . $colNames . ' ' . $values;
 		$insertQuery = $this->pdo->prepare($insertQuery);
@@ -178,10 +177,10 @@ class SimpleSAML_Store_SQL extends SimpleSAML_Store {
 		} catch (PDOException $e) {
 			$ecode = (string)$e->getCode();
 			switch ($ecode) {
-			case '23505': /* PostgreSQL */
+			case '23505': // PostgreSQL
 				break;
 			default:
-				SimpleSAML_Logger::error('Error while saving data: ' . $e->getMessage());
+				SimpleSAML\Logger::error('Error while saving data: ' . $e->getMessage());
 				throw $e;
 			}
 		}
@@ -210,7 +209,7 @@ class SimpleSAML_Store_SQL extends SimpleSAML_Store {
 	 */
 	private function cleanKVStore() {
 
-		SimpleSAML_Logger::debug('store.sql: Cleaning key-value store.');
+		SimpleSAML\Logger::debug('store.sql: Cleaning key-value store.');
 
 		$query = 'DELETE FROM ' . $this->prefix . '_kvstore WHERE _expire < :now';
 		$params = array('now' => gmdate('Y-m-d H:i:s'));
@@ -252,6 +251,10 @@ class SimpleSAML_Store_SQL extends SimpleSAML_Store {
 		}
 		$value = urldecode($value);
 		$value = unserialize($value);
+
+                if ($value === FALSE) {
+                    return NULL;
+                }
 		return $value;
 	}
 

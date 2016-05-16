@@ -1,10 +1,10 @@
-simpleSAMLphp SP API reference
+SimpleSAMLphp SP API reference
 ==============================
 
 <!-- {{TOC}} -->
 
 This document describes the SimpleSAML_Auth_Simple API.
-This is the preferred API for integrating simpleSAMLphp with other applications.
+This is the preferred API for integrating SimpleSAMLphp with other applications.
 
 Constructor
 -----------
@@ -86,7 +86,7 @@ The following global parameters are supported:
 
 `ErrorURL` (`string`)
 
-:   An URL to a page which will receive errors that may occur during authentication.
+:   A URL to a page which will receive errors that may occur during authentication.
 
 `KeepPost` (`bool`)
 
@@ -209,7 +209,7 @@ See the [`saml:SP`](./saml:sp) reference for information about available SAML au
 ### Example
 
     $idp = $auth->getAuthData('saml:sp:IdP');
-    print(You are logged in from: ' . htmlspecialchars($idp));
+    print('You are logged in from: ' . htmlspecialchars($idp));
 
 
 `getLoginURL`
@@ -217,7 +217,7 @@ See the [`saml:SP`](./saml:sp) reference for information about available SAML au
 
     string getLoginURL(string $returnTo = NULL)
 
-Retrieve an URL that can be used to start authentication.
+Retrieve a URL that can be used to start authentication.
 
 ### Parameters
 
@@ -246,7 +246,7 @@ The URL should be:
 
     string getLogoutURL(string $returnTo = NULL)
 
-Retrieve an URL that can be used to trigger logout.
+Retrieve a URL that can be used to trigger logout.
 
 ### Parameters
 

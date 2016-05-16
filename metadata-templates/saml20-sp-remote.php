@@ -1,12 +1,12 @@
 <?php
 /**
- * SAML 2.0 remote SP metadata for simpleSAMLphp.
+ * SAML 2.0 remote SP metadata for SimpleSAMLphp.
  *
- * See: http://simplesamlphp.org/docs/trunk/simplesamlphp-reference-sp-remote
+ * See: https://simplesamlphp.org/docs/stable/simplesamlphp-reference-sp-remote
  */
 
 /*
- * Example simpleSAMLphp SAML 2.0 SP
+ * Example SimpleSAMLphp SAML 2.0 SP
  */
 $metadata['https://saml2sp.example.org'] = array(
 	'AssertionConsumerService' => 'https://saml2sp.example.org/simplesaml/module.php/saml/sp/saml2-acs.php/default-sp',
@@ -21,7 +21,7 @@ $metadata['https://saml2sp.example.org'] = array(
  */
 $metadata['google.com'] = array(
 	'AssertionConsumerService' => 'https://www.google.com/a/g.feide.no/acs',
-	'NameIDFormat' => 'urn:oasis:names:tc:SAML:2.0:nameid-format:email',
+	'NameIDFormat' => 'urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress',
 	'simplesaml.nameidattribute' => 'uid',
 	'simplesaml.attributes' => FALSE,
 );

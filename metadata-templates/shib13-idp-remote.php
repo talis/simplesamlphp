@@ -1,10 +1,10 @@
 <?php
 /**
- * SAML 1.1 remote IdP metadata for simpleSAMLphp.
+ * SAML 1.1 remote IdP metadata for SimpleSAMLphp.
  *
  * Remember to remove the IdPs you don't use from this file.
  *
- * See: https://rnd.feide.no/content/idp-remote-metadata-reference
+ * See: https://simplesamlphp.org/docs/stable/simplesamlphp-reference-idp-remote
  */
 
 /*

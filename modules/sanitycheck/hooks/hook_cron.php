@@ -9,16 +9,17 @@ function sanitycheck_hook_cron(&$croninfo) {
 	assert('array_key_exists("summary", $croninfo)');
 	assert('array_key_exists("tag", $croninfo)');
 
-	SimpleSAML_Logger::info('cron [sanitycheck]: Running cron in cron tag [' . $croninfo['tag'] . '] ');
+	SimpleSAML\Logger::info('cron [sanitycheck]: Running cron in cron tag [' . $croninfo['tag'] . '] ');
 
 	try {
 	
-		$sconfig = SimpleSAML_Configuration::getConfig('config-sanitycheck.php');
-		
-		if (is_null($sconfig->getValue('cron_tag', NULL))) return;
-		if ($sconfig->getValue('cron_tag', NULL) !== $croninfo['tag']) return;
-		
-		
+		$sconfig = SimpleSAML_Configuration::getOptionalConfig('config-sanitycheck.php');
+
+		$cronTag = $sconfig->getString('cron_tag', NULL);
+		if ($cronTag === NULL || $cronTag !== $croninfo['tag']) {
+			return;
+		}
+
 		$info = array();
 		$errors = array();
 		$hookinfo = array(
@@ -26,7 +27,7 @@ function sanitycheck_hook_cron(&$croninfo) {
 			'errors' => &$errors,
 		);
 		
-		SimpleSAML_Module::callHooks('sanitycheck', $hookinfo);
+		SimpleSAML\Module::callHooks('sanitycheck', $hookinfo);
 		
 		if (count($errors) > 0) {
 			foreach ($errors AS $err) {
@@ -39,4 +40,3 @@ function sanitycheck_hook_cron(&$croninfo) {
 	}
 
 }
-?>

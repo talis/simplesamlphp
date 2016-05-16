@@ -1,4 +1,3 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <?php
 
 
@@ -25,23 +24,32 @@ if (array_key_exists('pageid', $this->data)) {
 		'page' => $this->data['pageid']
 	);
 		
-	SimpleSAML_Module::callHooks('htmlinject', $hookinfo);	
+	SimpleSAML\Module::callHooks('htmlinject', $hookinfo);
 }
 // - o - o - o - o - o - o - o - o - o - o - o - o -
 
+/**
+ * Do not allow to frame SimpleSAMLphp pages from another location.
+ * This prevents clickjacking attacks in modern browsers.
+ *
+ * If you don't want any framing at all you can even change this to
+ * 'DENY', or comment it out if you actually want to allow foreign
+ * sites to put SimpleSAMLphp in a frame. The latter is however
+ * probably not a good security practice.
+ */
+header('X-Frame-Options: SAMEORIGIN');
 
-
-
-?>
+?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0" />
 <script type="text/javascript" src="/<?php echo $this->data['baseurlpath']; ?>resources/script.js"></script>
 <title><?php
 if(array_key_exists('header', $this->data)) {
 	echo $this->data['header'];
 } else {
-	echo 'simpleSAMLphp';
+	echo 'SimpleSAMLphp';
 }
 ?></title>
 
@@ -51,32 +59,26 @@ if(array_key_exists('header', $this->data)) {
 <?php
 
 if(!empty($jquery)) {
-	$version = '1.5';
+	$version = '1.8';
 	if (array_key_exists('version', $jquery))
 		$version = $jquery['version'];
 		
-	if ($version == '1.5') {
+	if ($version == '1.8') {
 		if (isset($jquery['core']) && $jquery['core'])
-			echo('<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery.js"></script>' . "\n");
+			echo('<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery-1.8.js"></script>' . "\n");
 	
 		if (isset($jquery['ui']) && $jquery['ui'])
-			echo('<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery-ui.js"></script>' . "\n");
+			echo('<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery-ui-1.8.js"></script>' . "\n");
 	
 		if (isset($jquery['css']) && $jquery['css'])
 			echo('<link rel="stylesheet" media="screen" type="text/css" href="/' . $this->data['baseurlpath'] . 
-				'resources/uitheme/jquery-ui-themeroller.css" />' . "\n");	
-			
-	} else if ($version == '1.6') {
-		if (isset($jquery['core']) && $jquery['core'])
-			echo('<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery-16.js"></script>' . "\n");
-	
-		if (isset($jquery['ui']) && $jquery['ui'])
-			echo('<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery-ui-16.js"></script>' . "\n");
-	
-		if (isset($jquery['css']) && $jquery['css'])
-			echo('<link rel="stylesheet" media="screen" type="text/css" href="/' . $this->data['baseurlpath'] . 
-				'resources/uitheme16/ui.all.css" />' . "\n");	
+				'resources/uitheme1.8/jquery-ui.css" />' . "\n");
 	}
+}
+
+if (isset($this->data['clipboard.js'])) {
+	echo '<script type="text/javascript" src="/'. $this->data['baseurlpath'] .
+		 'resources/clipboard.min.js"></script>'."\n";
 }
 
 if(!empty($this->data['htmlinject']['htmlContentHead'])) {
@@ -88,6 +90,11 @@ if(!empty($this->data['htmlinject']['htmlContentHead'])) {
 
 
 
+if ($this->isLanguageRTL()) {
+?>
+	<link rel="stylesheet" type="text/css" href="/<?php echo $this->data['baseurlpath']; ?>resources/default-rtl.css" />
+<?php	
+}
 ?>
 
 	
@@ -119,7 +126,7 @@ if($onLoad !== '') {
 	
 	<div id="header">
 		<h1><a style="text-decoration: none; color: white" href="/<?php echo $this->data['baseurlpath']; ?>"><?php 
-			echo (isset($this->data['header']) ? $this->data['header'] : 'simpleSAMLphp'); 
+			echo (isset($this->data['header']) ? $this->data['header'] : 'SimpleSAMLphp');
 		?></a></h1>
 	</div>
 
@@ -134,49 +141,60 @@ if($onLoad !== '') {
 	
 	if ($includeLanguageBar) {
 		
-		
-		echo '<div id="languagebar">';
 		$languages = $this->getLanguageList();
-		$langnames = array(
-					'no' => 'Bokmål',
-					'nn' => 'Nynorsk',
-					'se' => 'Sámegiella',
-					'sam' => 'Åarjelh-saemien giele',
-					'da' => 'Dansk',
-					'en' => 'English',
-					'de' => 'Deutsch',
-					'sv' => 'Svenska',
-					'fi' => 'Suomeksi',
-					'es' => 'Español',
-					'fr' => 'Français',
-					'it' => 'Italiano',
-					'nl' => 'Nederlands',
-					'lb' => 'Luxembourgish', 
-					'cs' => 'Czech',
-					'sl' => 'Slovenščina', // Slovensk
-					'lt' => 'Lietuvių kalba', // Lithuanian
-					'hr' => 'Hrvatski', // Croatian
-					'hu' => 'Magyar', // Hungarian
-					'pl' => 'Język polski', // Polish
-					'pt' => 'Português', // Portuguese
-					'pt-BR' => 'Português brasileiro', // Portuguese
-					'tr' => 'Türkçe',
-					'el' => 'ελληνικά',
-					'ja' => '日本語',
-					'zh-tw' => '中文',
-		);
-		
-		$textarray = array();
-		foreach ($languages AS $lang => $current) {
-			if ($current) {
-				$textarray[] = $langnames[$lang];
-			} else {
-				$textarray[] = '<a href="' . htmlspecialchars(SimpleSAML_Utilities::addURLparameter(SimpleSAML_Utilities::selfURL(), array('language' => $lang))) . '">' .
-					$langnames[$lang] . '</a>';
+		if ( count($languages) > 1 ) {
+			echo '<div id="languagebar">';
+			$langnames = array(
+						'no' => 'Bokmål', // Norwegian Bokmål
+						'nn' => 'Nynorsk', // Norwegian Nynorsk
+						'se' => 'Sámegiella', // Northern Sami
+						'da' => 'Dansk', // Danish
+						'en' => 'English',
+						'de' => 'Deutsch', // German
+						'sv' => 'Svenska', // Swedish
+						'fi' => 'Suomeksi', // Finnish
+						'es' => 'Español', // Spanish
+						'fr' => 'Français', // French
+						'it' => 'Italiano', // Italian
+						'nl' => 'Nederlands', // Dutch
+						'lb' => 'Lëtzebuergesch', // Luxembourgish
+						'cs' => 'Čeština', // Czech
+						'sl' => 'Slovenščina', // Slovensk
+						'lt' => 'Lietuvių kalba', // Lithuanian
+						'hr' => 'Hrvatski', // Croatian
+						'hu' => 'Magyar', // Hungarian
+						'pl' => 'Język polski', // Polish
+						'pt' => 'Português', // Portuguese
+						'pt-br' => 'Português brasileiro', // Portuguese
+						'ru' => 'русский язык', // Russian
+						'et' => 'eesti keel', // Estonian
+						'tr' => 'Türkçe', // Turkish
+						'el' => 'ελληνικά', // Greek
+						'ja' => '日本語', // Japanese
+						'zh' => '简体中文', // Chinese (simplified)
+						'zh-tw' => '繁體中文', // Chinese (traditional)
+						'ar' => 'العربية', // Arabic
+						'he' => 'עִבְרִית', // Hebrew
+						'id' => 'Bahasa Indonesia', // Indonesian
+						'sr' => 'Srpski', // Serbian
+						'lv' => 'Latviešu', // Latvian
+						'ro' => 'Românește', // Romanian
+						'eu' => 'Euskara', // Basque
+			);
+			
+			$textarray = array();
+			foreach ($languages AS $lang => $current) {
+				$lang = strtolower($lang);
+				if ($current) {
+					$textarray[] = $langnames[$lang];
+				} else {
+					$textarray[] = '<a href="' . htmlspecialchars(\SimpleSAML\Utils\HTTP::addURLParameters(\SimpleSAML\Utils\HTTP::getSelfURL(), array($this->getTranslator()->getLanguage()->getLanguageParameterName() => $lang))) . '">' .
+						$langnames[$lang] . '</a>';
+				}
 			}
+			echo join(' | ', $textarray);
+			echo '</div>';
 		}
-		echo join(' | ', $textarray);
-		echo '</div>';
 
 	}
 

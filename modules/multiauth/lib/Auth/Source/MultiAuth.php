@@ -5,8 +5,7 @@
  * other authentication sources
  *
  * @author Lorenzo Gil, Yaco Sistemas S.L.
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 
 class sspmod_multiauth_Auth_Source_MultiAuth extends SimpleSAML_Auth_Source {
@@ -46,14 +45,48 @@ class sspmod_multiauth_Auth_Source_MultiAuth extends SimpleSAML_Auth_Source {
 		assert('is_array($info)');
 		assert('is_array($config)');
 
-		/* Call the parent constructor first, as required by the interface. */
+		// Call the parent constructor first, as required by the interface
 		parent::__construct($info, $config);
 
 		if (!array_key_exists('sources', $config)) {
 			throw new Exception('The required "sources" config option was not found');
 		}
 
-		$this->sources = $config['sources'];
+		$globalConfiguration = SimpleSAML_Configuration::getInstance();
+		$defaultLanguage = $globalConfiguration->getString('language.default', 'en');
+		$authsources = SimpleSAML_Configuration::getConfig('authsources.php');
+		$this->sources = array();
+		foreach($config['sources'] as $source => $info) {
+
+			if (is_int($source)) { // Backwards compatibility 
+				$source = $info;
+				$info = array();
+			}
+
+			if (array_key_exists('text', $info)) {
+				$text = $info['text'];
+			} else {
+				$text = array($defaultLanguage => $source);
+			}
+
+			if (array_key_exists('css-class', $info)) {
+				$css_class = $info['css-class'];
+			} else {
+				// Use the authtype as the css class
+				$authconfig = $authsources->getArray($source, NULL);
+				if (!array_key_exists(0, $authconfig) || !is_string($authconfig[0])) {
+					$css_class = "";
+				} else {
+					$css_class = str_replace(":", "-", $authconfig[0]);
+				}
+			}
+
+			$this->sources[] = array(
+				'source' => $source,
+				'text' => $text,
+				'css_class' => $css_class,
+			);
+		}
 	}
 
 	/**
@@ -79,15 +112,15 @@ class sspmod_multiauth_Auth_Source_MultiAuth extends SimpleSAML_Auth_Source {
 
 		/* Redirect to the select source page. We include the identifier of the
 		saved state array as a parameter to the login form */
-		$url = SimpleSAML_Module::getModuleURL('multiauth/selectsource.php');
+		$url = SimpleSAML\Module::getModuleURL('multiauth/selectsource.php');
 		$params = array('AuthState' => $id);
-        
-        // Allowes the user to specify the auth souce to be used
-        if(isset($_GET['source'])) {
-            $params['source'] = $_GET['source'];    
-        }
-		
-        SimpleSAML_Utilities::redirect($url, $params);
+
+		// Allowes the user to specify the auth souce to be used
+		if(isset($_GET['source'])) {
+			$params['source'] = $_GET['source'];
+		}
+
+		\SimpleSAML\Utils\HTTP::redirectTrustedURL($url, $params);
 
 		/* The previous function never returns, so this code is never
 		executed */
@@ -115,8 +148,8 @@ class sspmod_multiauth_Auth_Source_MultiAuth extends SimpleSAML_Auth_Source {
 		}
 
 		/* Save the selected authentication source for the logout process. */
-		$session = SimpleSAML_Session::getInstance();
-		$session->setData(self::SESSION_SOURCE, $state[self::AUTHID], $authId);
+		$session = SimpleSAML_Session::getSessionFromRequest();
+		$session->setData(self::SESSION_SOURCE, $state[self::AUTHID], $authId, SimpleSAML_Session::DATA_TIMEOUT_SESSION_END);
 
 		try {
 			$as->authenticate($state);
@@ -141,7 +174,7 @@ class sspmod_multiauth_Auth_Source_MultiAuth extends SimpleSAML_Auth_Source {
 		assert('is_array($state)');
 
 		/* Get the source that was used to authenticate */
-		$session = SimpleSAML_Session::getInstance();
+		$session = SimpleSAML_Session::getSessionFromRequest();
 		$authId = $session->getData(self::SESSION_SOURCE, $this->authId);
 
 		$source = SimpleSAML_Auth_Source::getById($authId);
@@ -152,6 +185,44 @@ class sspmod_multiauth_Auth_Source_MultiAuth extends SimpleSAML_Auth_Source {
 		$source->logout($state);
 	}
 
-}
+	/**
+	* Set the previous authentication source.
+	*
+	* This method remembers the authentication source that the user selected
+	* by storing its name in a cookie.
+	*
+	* @param string $source Name of the authentication source the user selected.
+	*/
+	public function setPreviousSource($source) {
+		assert('is_string($source)');
 
-?>
+		$cookieName = 'multiauth_source_' . $this->authId;
+
+		$config = SimpleSAML_Configuration::getInstance();
+		$params = array(
+			/* We save the cookies for 90 days. */
+			'lifetime' => (60*60*24*90),
+			/* The base path for cookies.
+			This should be the installation directory for SimpleSAMLphp. */
+			'path' => ('/' . $config->getBaseUrl()),
+			'httponly' => FALSE,
+		);
+
+        \SimpleSAML\Utils\HTTP::setCookie($cookieName, $source, $params, FALSE);
+	}
+
+	/**
+	* Get the previous authentication source.
+	*
+	* This method retrieves the authentication source that the user selected
+	* last time or NULL if this is the first time or remembering is disabled.
+	*/
+	public function getPreviousSource() {
+		$cookieName = 'multiauth_source_' . $this->authId;
+		if(array_key_exists($cookieName, $_COOKIE)) {
+			return $_COOKIE[$cookieName];
+		} else {
+			return NULL;
+		}
+	}
+}

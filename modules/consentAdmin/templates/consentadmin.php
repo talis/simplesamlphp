@@ -1,7 +1,7 @@
 <?php $this->includeAtTemplateBase('includes/header.php'); ?>
 <!--  default theme -->
 <?php 
-$this->includeLanguageFile('attributes.php'); // attribute listings translated by this dictionary
+$this->getTranslator()->includeLanguageFile('attributes.php'); // attribute listings translated by this dictionary
  
 ?> 
 
@@ -54,7 +54,7 @@ span.showhide {
 </style>
 	
 
-		<!-- <h2><?php if (isset($this->data['header'])) { echo $this->t($this->data['header']); } else { echo "Some error occured"; } ?></h2> -->
+		<!-- <h2><?php if (isset($this->data['header'])) { echo $this->t($this->data['header']); } else { echo "Some error occurred"; } ?></h2> -->
 	    <h2><?php echo $this->t('consentadmin_header') ?></h2>	
 		<p> 
 		<?php echo $this->t('consentadmin_description1') ?> </p>
@@ -68,13 +68,12 @@ span.showhide {
 			<?php
 			$spList = $this->data['spList'];
 			$show_spid = 0;
-			//$show_hide_attributes= $this->t('show_hide_attributes');
 			$show_text = $this->t('show');
 			$hide_text = $this->t('hide');
 			$attributes_text = $this->t('attributes_text');
 			foreach ($spList AS $spName => $spValues) {
-				$this->includeInlineTranslation('spname', $spValues['name']);
-				$this->includeInlineTranslation('spdescription', $spValues['description']);
+				$this->getTranslator()->includeInlineTranslation('spname', $spValues['name']);
+				$this->getTranslator()->includeInlineTranslation('spdescription', $spValues['description']);
                 if (!is_null($spValues['serviceurl'])) {
                     $htmlSpName = '<a href="' . $spValues['serviceurl'] . '" style="color: black; font-weight: bold;">' . htmlspecialchars($this->t('spname', array(), false, true)) . '</a>';
                 } else {
@@ -102,7 +101,7 @@ TRSTART;
 				if (isset($this->data['attribute_' . htmlspecialchars(strtolower($name)) ])) {
 				  $name = $this->data['attribute_' . htmlspecialchars(strtolower($name))];
 				}
-				$name = $this->getAttributeTranslation($name); // translate
+				$name = $this->getTranslator()->getAttributeTranslation($name); // translate
 				if (sizeof($value) > 1) {
 						echo "<li>" . htmlspecialchars($name) . ":\n<ul>\n";
 						foreach ($value AS $v) {
@@ -132,6 +131,6 @@ TRSTART;
 		
 		<h2>Logout</h2>
 
-			<p><a href="<?php echo SimpleSAML_Utilities::selfURL() . '?logout'; ?>">Logout</a></p>
+			<p><a href="<?php echo \SimpleSAML\Utils\HTTP::getSelfURL() . '?logout'; ?>">Logout</a></p>
 		
-<?php $this->includeAtTemplateBase('includes/footer.php'); ?>
+<?php $this->includeAtTemplateBase('includes/footer.php');

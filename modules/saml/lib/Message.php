@@ -5,13 +5,12 @@
  * Common code for building SAML 2 messages based on the
  * available metadata.
  *
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class sspmod_saml_Message {
 
 	/**
-	 * Add signature key and and senders certificate to an element (Message or Assertion).
+	 * Add signature key and sender certificate to an element (Message or Assertion).
 	 *
 	 * @param SimpleSAML_Configuration $srcMetadata  The metadata of the sender.
 	 * @param SimpleSAML_Configuration $dstMetadata  The metadata of the recipient.
@@ -19,10 +18,32 @@ class sspmod_saml_Message {
 	 */
 	public static function addSign(SimpleSAML_Configuration $srcMetadata, SimpleSAML_Configuration $dstMetadata, SAML2_SignedElement $element) {
 
-		$keyArray = SimpleSAML_Utilities::loadPrivateKey($srcMetadata, TRUE);
-		$certArray = SimpleSAML_Utilities::loadPublicKey($srcMetadata, FALSE);
+		$dstPrivateKey = $dstMetadata->getString('signature.privatekey', NULL);
 
-		$privateKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type' => 'private'));
+		if ($dstPrivateKey !== NULL) {
+			$keyArray = SimpleSAML\Utils\Crypto::loadPrivateKey($dstMetadata, TRUE, 'signature.');
+			$certArray = SimpleSAML\Utils\Crypto::loadPublicKey($dstMetadata, FALSE, 'signature.');
+		} else {
+			$keyArray = SimpleSAML\Utils\Crypto::loadPrivateKey($srcMetadata, TRUE);
+			$certArray = SimpleSAML\Utils\Crypto::loadPublicKey($srcMetadata, FALSE);
+		}
+
+		$algo = $dstMetadata->getString('signature.algorithm', NULL);
+		if ($algo === NULL) {
+			/*
+			 * In the NIST Special Publication 800-131A, SHA-1 became deprecated for generating
+			 * new digital signatures in 2011, and will be explicitly disallowed starting the 1st
+			 * of January, 2014. We'll keep this as a default for the next release and mark it
+			 * as deprecated, as part of the transition to SHA-256.
+			 *
+			 * See http://csrc.nist.gov/publications/nistpubs/800-131A/sp800-131A.pdf for more info.
+			 *
+			 * TODO: change default to XMLSecurityKey::RSA_SHA256.
+			 */
+			$algo = $srcMetadata->getString('signature.algorithm', XMLSecurityKey::RSA_SHA1);
+		}
+
+		$privateKey = new XMLSecurityKey($algo, array('type' => 'private'));
 		if (array_key_exists('password', $keyArray)) {
 			$privateKey->passphrase = $keyArray['password'];
 		}
@@ -31,12 +52,12 @@ class sspmod_saml_Message {
 		$element->setSignatureKey($privateKey);
 
 		if ($certArray === NULL) {
-			/* We don't have a certificate to add. */
+			// We don't have a certificate to add
 			return;
 		}
 
 		if (!array_key_exists('PEM', $certArray)) {
-			/* We have a public key with only a fingerprint. */
+			// We have a public key with only a fingerprint.
 			return;
 		}
 
@@ -133,7 +154,7 @@ class sspmod_saml_Message {
 						"-----END CERTIFICATE-----\n";
 					break;
 				default:
-					SimpleSAML_Logger::debug('Skipping unknown key type: ' . $key['type']);
+					SimpleSAML\Logger::debug('Skipping unknown key type: ' . $key['type']);
 				}
 			}
 
@@ -151,40 +172,21 @@ class sspmod_saml_Message {
 			 */
 			if (count($certificates) === 0) {
 				/* We need the full certificate in order to match it against the fingerprint. */
-				SimpleSAML_Logger::debug('No certificate in message when validating against fingerprint.');
+				SimpleSAML\Logger::debug('No certificate in message when validating against fingerprint.');
 				return FALSE;
 			} else {
-				SimpleSAML_Logger::debug('Found ' . count($certificates) . ' certificates in ' . get_class($element));
+				SimpleSAML\Logger::debug('Found ' . count($certificates) . ' certificates in ' . get_class($element));
 			}
 
 			$pemCert = self::findCertificate($certFingerprint, $certificates);
 			$pemKeys = array($pemCert);
 		} else {
-			/* Attempt CA validation. */
-			$caFile = $srcMetadata->getString('caFile', NULL);
-			if ($caFile === NULL) {
-				throw new SimpleSAML_Error_Exception(
-					'Missing certificate in metadata for ' .
-					var_export($srcMetadata->getString('entityid'), TRUE));
-			}
-			$caFile = SimpleSAML_Utilities::resolveCert($caFile);
-
-			if (count($certificates) === 0) {
-				/* We need the full certificate in order to check it against the CA file. */
-				SimpleSAML_Logger::debug('No certificate in message when validating with CA.');
-				return FALSE;
-			}
-
-			/* We assume that it is the first certificate that was used to sign the message. */
-			$pemCert = "-----BEGIN CERTIFICATE-----\n" .
-				chunk_split($certificates[0], 64) .
-				"-----END CERTIFICATE-----\n";
-
-			SimpleSAML_Utilities::validateCA($pemCert, $caFile);
-			$pemKeys = array($pemCert);
+			throw new SimpleSAML_Error_Exception(
+				'Missing certificate in metadata for ' .
+				var_export($srcMetadata->getString('entityid'), TRUE));
 		}
 
-		SimpleSAML_Logger::debug('Has ' . count($pemKeys) . ' candidate keys for validation.');
+		SimpleSAML\Logger::debug('Has ' . count($pemKeys) . ' candidate keys for validation.');
 
 		$lastException = NULL;
 		foreach ($pemKeys as $i => $pem) {
@@ -198,12 +200,12 @@ class sspmod_saml_Message {
 				 */
 				$res = $element->validate($key);
 				if ($res) {
-					SimpleSAML_Logger::debug('Validation with key #' . $i . ' succeeded.');
+					SimpleSAML\Logger::debug('Validation with key #' . $i . ' succeeded.');
 					return TRUE;
 				}
-				SimpleSAML_Logger::debug('Validation with key #' . $i . ' failed without exception.');
+				SimpleSAML\Logger::debug('Validation with key #' . $i . ' failed without exception.');
 			} catch (Exception $e) {
-				SimpleSAML_Logger::debug('Validation with key #' . $i . ' failed with exception: ' . $e->getMessage());
+				SimpleSAML\Logger::debug('Validation with key #' . $i . ' failed with exception: ' . $e->getMessage());
 				$lastException = $e;
 			}
 		}
@@ -279,7 +281,7 @@ class sspmod_saml_Message {
 		$keys = array();
 
 		/* Load the new private key if it exists. */
-		$keyArray = SimpleSAML_Utilities::loadPrivateKey($dstMetadata, FALSE, 'new_');
+		$keyArray = SimpleSAML\Utils\Crypto::loadPrivateKey($dstMetadata, FALSE, 'new_');
 		if ($keyArray !== NULL) {
 			assert('isset($keyArray["PEM"])');
 
@@ -292,7 +294,7 @@ class sspmod_saml_Message {
 		}
 
 		/* Find the existing private key. */
-		$keyArray = SimpleSAML_Utilities::loadPrivateKey($dstMetadata, TRUE);
+		$keyArray = SimpleSAML\Utils\Crypto::loadPrivateKey($dstMetadata, TRUE);
 		assert('isset($keyArray["PEM"])');
 
 		$key = new XMLSecurityKey(XMLSecurityKey::RSA_1_5, array('type'=>'private'));
@@ -303,6 +305,26 @@ class sspmod_saml_Message {
 		$keys[] = $key;
 
 		return $keys;
+	}
+
+
+	/**
+	 * Retrieve blacklisted algorithms.
+	 *
+	 * Remote configuration overrides local configuration.
+	 *
+	 * @param SimpleSAML_Configuration $srcMetadata  The metadata of the sender.
+	 * @param SimpleSAML_Configuration $dstMetadata  The metadata of the recipient.
+	 * @return array  Array of blacklisted algorithms.
+	 */
+	public static function getBlacklistedAlgorithms(SimpleSAML_Configuration $srcMetadata,
+		SimpleSAML_Configuration $dstMetadata) {
+
+		$blacklist = $srcMetadata->getArray('encryption.blacklisted-algorithms', NULL);
+		if ($blacklist === NULL) {
+			$blacklist = $dstMetadata->getArray('encryption.blacklisted-algorithms', array(XMLSecurityKey::RSA_1_5));
+		}
+		return $blacklist;
 	}
 
 
@@ -341,14 +363,16 @@ class sspmod_saml_Message {
 			throw new SimpleSAML_Error_Exception('Error decrypting assertion: ' . $e->getMessage());
 		}
 
+		$blacklist = self::getBlacklistedAlgorithms($srcMetadata, $dstMetadata);
+
 		$lastException = NULL;
 		foreach ($keys as $i => $key) {
 			try {
-				$ret = $assertion->getAssertion($key);
-				SimpleSAML_Logger::debug('Decryption with key #' . $i . ' succeeded.');
+				$ret = $assertion->getAssertion($key, $blacklist);
+				SimpleSAML\Logger::debug('Decryption with key #' . $i . ' succeeded.');
 				return $ret;
 			} catch (Exception $e) {
-				SimpleSAML_Logger::debug('Decryption with key #' . $i . ' failed with exception: ' . $e->getMessage());
+				SimpleSAML\Logger::debug('Decryption with key #' . $i . ' failed with exception: ' . $e->getMessage());
 				$lastException = $e;
 			}
 		}
@@ -379,36 +403,47 @@ class sspmod_saml_Message {
 
 		$ar = new SAML2_AuthnRequest();
 
-		if ($spMetadata->hasValue('NameIDPolicy')) {
-			$nameIdPolicy = $spMetadata->getString('NameIDPolicy', NULL);
-		} else {
-			$nameIdPolicy = $spMetadata->getString('NameIDFormat', SAML2_Const::NAMEID_TRANSIENT);
+		// get the NameIDPolicy to apply. IdP metadata has precedence.
+		$nameIdPolicy = array();
+		if ($idpMetadata->hasValue('NameIDPolicy')) {
+			$nameIdPolicy = $idpMetadata->getValue('NameIDPolicy');
+		} elseif ($spMetadata->hasValue('NameIDPolicy')) {
+			$nameIdPolicy = $spMetadata->getValue('NameIDPolicy');
 		}
 
-		if ($nameIdPolicy !== NULL) {
-			$ar->setNameIdPolicy(array(
-				'Format' => $nameIdPolicy,
-				'AllowCreate' => TRUE,
-			));
+		if (!is_array($nameIdPolicy)) {
+			// handle old configurations where 'NameIDPolicy' was used to specify just the format
+			$nameIdPolicy = array('Format' => $nameIdPolicy);
 		}
 
-		$dst = $idpMetadata->getDefaultEndpoint('SingleSignOnService', array(SAML2_Const::BINDING_HTTP_REDIRECT));
-		$dst = $dst['Location'];
-
-		$ar->setIssuer($spMetadata->getString('entityid'));
-		$ar->setDestination($dst);
+		$nameIdPolicy_cf = SimpleSAML_Configuration::loadFromArray($nameIdPolicy);
+		$policy = array(
+			'Format' => $nameIdPolicy_cf->getString('Format', SAML2_Const::NAMEID_TRANSIENT),
+			'AllowCreate' => $nameIdPolicy_cf->getBoolean('AllowCreate', true),
+		);
+		$spNameQualifier = $nameIdPolicy_cf->getString('SPNameQualifier', false);
+		if ($spNameQualifier !== false) {
+			$policy['SPNameQualifier'] = $spNameQualifier;
+		}
+		$ar->setNameIdPolicy($policy);
 
 		$ar->setForceAuthn($spMetadata->getBoolean('ForceAuthn', FALSE));
 		$ar->setIsPassive($spMetadata->getBoolean('IsPassive', FALSE));
 
 		$protbind = $spMetadata->getValueValidate('ProtocolBinding', array(
 				SAML2_Const::BINDING_HTTP_POST,
+				SAML2_Const::BINDING_HOK_SSO,
 				SAML2_Const::BINDING_HTTP_ARTIFACT,
 				SAML2_Const::BINDING_HTTP_REDIRECT,
 			), SAML2_Const::BINDING_HTTP_POST);
 
 		/* Shoaib - setting the appropriate binding based on parameter in sp-metadata defaults to HTTP_POST */
 		$ar->setProtocolBinding($protbind);
+
+		$ar->setIssuer($spMetadata->getString('entityid'));
+
+		$ar->setAssertionConsumerServiceIndex($spMetadata->getInteger('AssertionConsumerServiceIndex', NULL));
+		$ar->setAttributeConsumingServiceIndex($spMetadata->getInteger('AttributeConsumingServiceIndex', NULL));
 
 		if ($spMetadata->hasValue('AuthnContextClassRef')) {
 			$accr = $spMetadata->getArrayizeString('AuthnContextClassRef');
@@ -429,13 +464,8 @@ class sspmod_saml_Message {
 	 */
 	public static function buildLogoutRequest(SimpleSAML_Configuration $srcMetadata, SimpleSAML_Configuration $dstMetadata) {
 
-		$dst = $dstMetadata->getDefaultEndpoint('SingleLogoutService', array(SAML2_Const::BINDING_HTTP_REDIRECT));
-		$dst = $dst['Location'];
-
 		$lr = new SAML2_LogoutRequest();
-
 		$lr->setIssuer($srcMetadata->getString('entityid'));
-		$lr->setDestination($dst);
 
 		self::addRedirectSign($srcMetadata, $dstMetadata, $lr);
 
@@ -451,17 +481,8 @@ class sspmod_saml_Message {
 	 */
 	public static function buildLogoutResponse(SimpleSAML_Configuration $srcMetadata, SimpleSAML_Configuration $dstMetadata) {
 
-		$dst = $dstMetadata->getDefaultEndpoint('SingleLogoutService', array(SAML2_Const::BINDING_HTTP_REDIRECT));
-		if (isset($dst['ResponseLocation'])) {
-			$dst = $dst['ResponseLocation'];
-		} else {
-			$dst = $dst['Location'];
-		}
-
 		$lr = new SAML2_LogoutResponse();
-
 		$lr->setIssuer($srcMetadata->getString('entityid'));
-		$lr->setDestination($dst);
 
 		self::addRedirectSign($srcMetadata, $dstMetadata, $lr);
 
@@ -490,7 +511,7 @@ class sspmod_saml_Message {
 		}
 
 		/* Validate Response-element destination. */
-		$currentURL = SimpleSAML_Utilities::selfURLNoQuery();
+		$currentURL = \SimpleSAML\Utils\HTTP::getSelfURLNoQuery();
 		$msgDestination = $response->getDestination();
 		if ($msgDestination !== NULL && $msgDestination !== $currentURL) {
 			throw new Exception('Destination in response doesn\'t match the current URL. Destination is "' .
@@ -546,7 +567,7 @@ class sspmod_saml_Message {
 		}
 		/* At least one valid signature found. */
 
-		$currentURL = SimpleSAML_Utilities::selfURLNoQuery();
+		$currentURL = \SimpleSAML\Utils\HTTP::getSelfURLNoQuery();
 
 
 		/* Check various properties of the assertion. */
@@ -577,12 +598,86 @@ class sspmod_saml_Message {
 
 		$found = FALSE;
 		$lastError = 'No SubjectConfirmation element in Subject.';
+		$validSCMethods = array(SAML2_Const::CM_BEARER, SAML2_Const::CM_HOK, SAML2_Const::CM_VOUCHES);
 		foreach ($assertion->getSubjectConfirmation() as $sc) {
-			if ($sc->Method !== SAML2_Const::CM_BEARER) {
+		    if (!in_array($sc->Method, $validSCMethods)) {
 				$lastError = 'Invalid Method on SubjectConfirmation: ' . var_export($sc->Method, TRUE);
 				continue;
 			}
+
+			/* Is SSO with HoK enabled? IdP remote metadata overwrites SP metadata configuration. */
+			$hok = $idpMetadata->getBoolean('saml20.hok.assertion', NULL);
+			if ($hok === NULL) {
+				$hok = $spMetadata->getBoolean('saml20.hok.assertion', FALSE);
+			}
+			if ($sc->Method === SAML2_Const::CM_BEARER && $hok) {
+				$lastError = 'Bearer SubjectConfirmation received, but Holder-of-Key SubjectConfirmation needed';
+				continue;
+			}
+			if ($sc->Method === SAML2_Const::CM_HOK && !$hok) {
+				$lastError = 'Holder-of-Key SubjectConfirmation received, but the Holder-of-Key profile is not enabled.';
+				continue;
+			}
+
 			$scd = $sc->SubjectConfirmationData;
+			if ($sc->Method === SAML2_Const::CM_HOK) {
+				/* Check HoK Assertion */
+				if (\SimpleSAML\Utils\HTTP::isHTTPS() === FALSE) {
+				    $lastError = 'No HTTPS connection, but required for Holder-of-Key SSO';
+				    continue;
+				}
+				if (isset($_SERVER['SSL_CLIENT_CERT']) && empty($_SERVER['SSL_CLIENT_CERT'])) {
+				    $lastError = 'No client certificate provided during TLS Handshake with SP';
+				    continue;
+				}
+				/* Extract certificate data (if this is a certificate). */
+				$clientCert = $_SERVER['SSL_CLIENT_CERT'];
+				$pattern = '/^-----BEGIN CERTIFICATE-----([^-]*)^-----END CERTIFICATE-----/m';
+				if (!preg_match($pattern, $clientCert, $matches)) {
+				    $lastError = 'Error while looking for client certificate during TLS handshake with SP, the client certificate does not '
+				                 . 'have the expected structure';
+				    continue;
+				}
+				/* We have a valid client certificate from the browser. */
+				$clientCert = str_replace(array("\r", "\n", " "), '', $matches[1]);
+
+				foreach ($scd->info as $thing) {
+				    if($thing instanceof SAML2_XML_ds_KeyInfo) {
+					$keyInfo[]=$thing;
+				    }
+				}
+				if (count($keyInfo)!=1) {
+				    $lastError = 'Error validating Holder-of-Key assertion: Only one <ds:KeyInfo> element in <SubjectConfirmationData> allowed';
+				    continue;
+				}
+
+				foreach ($keyInfo[0]->info as $thing) {
+				    if($thing instanceof SAML2_XML_ds_X509Data) {
+					$x509data[]=$thing;
+				    }
+				}
+				if (count($x509data)!=1) {
+				    $lastError = 'Error validating Holder-of-Key assertion: Only one <ds:X509Data> element in <ds:KeyInfo> within <SubjectConfirmationData> allowed';
+				    continue;
+				}
+
+				foreach ($x509data[0]->data as $thing) {
+				    if($thing instanceof SAML2_XML_ds_X509Certificate) {
+					$x509cert[]=$thing;
+				    }
+				}
+				if (count($x509cert)!=1) {
+				    $lastError = 'Error validating Holder-of-Key assertion: Only one <ds:X509Certificate> element in <ds:X509Data> within <SubjectConfirmationData> allowed';
+				    continue;
+				}
+
+				$HoKCertificate = $x509cert[0]->certificate;
+				if ($HoKCertificate !== $clientCert) {
+					$lastError = 'Provided client certificate does not match the certificate bound to the Holder-of-Key assertion';
+					continue;
+				}
+			}
+
 			if ($scd->NotBefore && $scd->NotBefore > time() + 60) {
 				$lastError = 'NotBefore in SubjectConfirmationData is in the future: ' . $scd->NotBefore;
 				continue;
@@ -635,15 +730,17 @@ class sspmod_saml_Message {
 				throw new SimpleSAML_Error_Exception('Error decrypting NameID: ' . $e->getMessage());
 			}
 
+			$blacklist = self::getBlacklistedAlgorithms($idpMetadata, $spMetadata);
+
 			$lastException = NULL;
 			foreach ($keys as $i => $key) {
 				try {
-					$assertion->decryptNameId($key);
-					SimpleSAML_Logger::debug('Decryption with key #' . $i . ' succeeded.');
+					$assertion->decryptNameId($key, $blacklist);
+					SimpleSAML\Logger::debug('Decryption with key #' . $i . ' succeeded.');
 					$lastException = NULL;
 					break;
 				} catch (Exception $e) {
-					SimpleSAML_Logger::debug('Decryption with key #' . $i . ' failed with exception: ' . $e->getMessage());
+					SimpleSAML\Logger::debug('Decryption with key #' . $i . ' failed with exception: ' . $e->getMessage());
 					$lastException = $e;
 				}
 			}
@@ -678,7 +775,7 @@ class sspmod_saml_Message {
 				$pemKey = "-----BEGIN CERTIFICATE-----\n" .
 					chunk_split($key['X509Certificate'], 64) .
 					"-----END CERTIFICATE-----\n";
-				$key = new XMLSecurityKey(XMLSecurityKey::RSA_1_5, array('type'=>'public'));
+				$key = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
 				$key->loadKey($pemKey);
 				return $key;
 			}

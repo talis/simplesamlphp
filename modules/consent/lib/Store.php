@@ -2,10 +2,9 @@
 /**
  * Base class for consent storage handlers.
  *
- * @package simpleSAMLphp
+ * @package SimpleSAMLphp
  * @author Olav Morken <olav.morken@uninett.no>
  * @author JAcob Christiansen <jach@wayf.dk>
- * @version $Id$
  */
 abstract class sspmod_consent_Store
 {
@@ -126,7 +125,7 @@ abstract class sspmod_consent_Store
             throw new Exception('Consent store without name given.');
         }
 
-        $className = SimpleSAML_Module::resolveClass(
+        $className = SimpleSAML\Module::resolveClass(
             $config[0],
             'Consent_Store',
             'sspmod_consent_Store'

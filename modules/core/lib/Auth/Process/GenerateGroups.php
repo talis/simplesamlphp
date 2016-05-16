@@ -4,8 +4,7 @@
  * Filter to generate a groups attribute based on many of the attributes of the user.
  *
  * @author Olav Morken, UNINETT AS.
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class sspmod_core_Auth_Process_GenerateGroups extends SimpleSAML_Auth_ProcessingFilter {
 
@@ -28,7 +27,7 @@ class sspmod_core_Auth_Process_GenerateGroups extends SimpleSAML_Auth_Processing
 		assert('is_array($config)');
 
 		if (count($config) === 0) {
-			/* Use default groups. */
+			// Use default groups
 			$this->generateGroupsFrom = array(
 				'eduPersonAffiliation',
 				'eduPersonOrgUnitDN',
@@ -36,7 +35,7 @@ class sspmod_core_Auth_Process_GenerateGroups extends SimpleSAML_Auth_Processing
 			);
 
 		} else {
-			/* Validate configuration. */
+			// Validate configuration
 			foreach ($config as $attributeName) {
 				if (!is_string($attributeName)) {
 					throw new Exception('Invalid attribute name for core:GenerateGroups filter: ' .
@@ -69,7 +68,7 @@ class sspmod_core_Auth_Process_GenerateGroups extends SimpleSAML_Auth_Processing
 
 		foreach ($this->generateGroupsFrom as $name) {
 			if (!array_key_exists($name, $attributes)) {
-				SimpleSAML_Logger::debug('GenerateGroups - attribute \'' . $name . '\' not found.');
+				SimpleSAML\Logger::debug('GenerateGroups - attribute \'' . $name . '\' not found.');
 				/* Attribute not present. */
 				continue;
 			}
@@ -135,13 +134,9 @@ class sspmod_core_Auth_Process_GenerateGroups extends SimpleSAML_Auth_Processing
 	private static function escapeIllegalChars($string) {
 		assert('is_string($string)');
 
-		/* Since preg_replace escapes both ["] and ['], while either of them isn't unescaped in the string
-		 * evaluation, we need a test to catch both of them.
-		 */
-		$replacement = '("\\1" === "\\\'") ? "%27" : sprintf("%%%02x", ord("\\1"))';
-		return preg_replace('/([^a-zA-Z0-9_@=.])/e', $replacement, $string);
+		return preg_replace_callback('/([^a-zA-Z0-9_@=.])/',
+			function ($m) { return sprintf("%%%02x", ord($m[1])); },
+			$string);
 	}
 
 }
-
-?>

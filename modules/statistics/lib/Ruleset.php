@@ -1,8 +1,7 @@
 <?php
 /*
  * @author Andreas Åkre Solberg <andreas.solberg@uninett.no>
- * @package simpleSAMLphp
- * @version $Id: Ruleset.php 1535 2009-06-23 08:15:13Z andreassolberg $
+ * @package SimpleSAMLphp
  */
 class sspmod_statistics_Ruleset {
 
@@ -52,7 +51,6 @@ class sspmod_statistics_Ruleset {
 		foreach ($this->availrules AS $key) {
 			$available_rules[$key] = array('name' => $statrules[$key]['name'], 'descr' => $statrules[$key]['descr']);
 		}
-		// echo('<pre>'); print_r($available_rules); exit;
 		$this->availrulenames = $available_rules;
 		
 	}
@@ -83,7 +81,7 @@ class sspmod_statistics_Ruleset {
 		$statrulesConfig = $this->statconfig->getConfigItem('statrules');
 		$statruleConfig = $statrulesConfig->getConfigItem($rule);
 		
-		$presenterClass = SimpleSAML_Module::resolveClass($statruleConfig->getValue('presenter', 'statistics:BaseRule'), 'Statistics_Rulesets');
+		$presenterClass = SimpleSAML\Module::resolveClass($statruleConfig->getValue('presenter', 'statistics:BaseRule'), 'Statistics_Rulesets');
 		$statrule = new $presenterClass($this->statconfig, $statruleConfig, $rule, $this->available);
 		return $statrule;
 	}

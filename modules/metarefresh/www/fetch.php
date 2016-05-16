@@ -3,16 +3,16 @@
 $config = SimpleSAML_Configuration::getInstance();
 $mconfig = SimpleSAML_Configuration::getOptionalConfig('config-metarefresh.php');
 
-SimpleSAML_Utilities::requireAdmin();
+SimpleSAML\Utils\Auth::requireAdmin();
 
-SimpleSAML_Logger::setCaptureLog(TRUE);
+SimpleSAML\Logger::setCaptureLog(TRUE);
 
 
 $sets = $mconfig->getConfigList('sets', array());
 
 foreach ($sets AS $setkey => $set) {
 
-	SimpleSAML_Logger::info('[metarefresh]: Executing set [' . $setkey . ']');
+	SimpleSAML\Logger::info('[metarefresh]: Executing set [' . $setkey . ']');
 
 	try {
 		
@@ -26,8 +26,44 @@ foreach ($sets AS $setkey => $set) {
 
 		$metaloader = new sspmod_metarefresh_MetaLoader($expire);
 
+		# Get global black/whitelists
+		$blacklist = $mconfig->getArray('blacklist', array());
+		$whitelist = $mconfig->getArray('whitelist', array());
+
+		// get global type filters
+		$available_types = array(
+			'saml20-idp-remote',
+			'saml20-sp-remote',
+			'shib13-idp-remote',
+			'shib13-sp-remote',
+			'attributeauthority-remote'
+		);
+		$set_types = $set->getArrayize('types', $available_types);
+
 		foreach($set->getArray('sources') AS $source) {
-			SimpleSAML_Logger::debug('[metarefresh]: In set [' . $setkey . '] loading source ['  . $source['src'] . ']');
+
+			// filter metadata by type of entity
+			if (isset($source['types'])) {
+				$metaloader->setTypes($source['types']);
+			} else {
+				$metaloader->setTypes($set_types);
+			}
+
+			# Merge global and src specific blacklists
+			if(isset($source['blacklist'])) {
+				$source['blacklist'] = array_unique(array_merge($source['blacklist'], $blacklist));
+			} else {
+				$source['blacklist'] = $blacklist;
+			}
+
+			# Merge global and src specific whitelists
+			if(isset($source['whitelist'])) {
+				$source['whitelist'] = array_unique(array_merge($source['whitelist'], $whitelist));
+			} else {
+				$source['whitelist'] = $whitelist;
+			}
+
+			SimpleSAML\Logger::debug('[metarefresh]: In set [' . $setkey . '] loading source ['  . $source['src'] . ']');
 			$metaloader->loadSource($source);
 		}
 
@@ -51,7 +87,7 @@ foreach ($sets AS $setkey => $set) {
 
 }
 
-$logentries = SimpleSAML_Logger::getCapturedLog();
+$logentries = SimpleSAML\Logger::getCapturedLog();
 
 $t = new SimpleSAML_XHTML_Template($config, 'metarefresh:fetch.tpl.php');
 $t->data['logentries'] = $logentries;

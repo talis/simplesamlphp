@@ -9,8 +9,7 @@
  * - getOrganizations()
  *
  * @author Olav Morken, UNINETT AS.
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 
@@ -28,6 +27,12 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 
 
 	/**
+	 * The key of the OrgId field in the state, identifies which org was selected.
+	 */
+	const ORGID = 'sspmod_core_Auth_UserPassOrgBase.SelectedOrg';
+
+
+	/**
 	 * What way do we handle the organization as part of the username.
 	 * Three values:
 	 *  'none': Force the user to select the correct organization from the dropdown box.
@@ -35,6 +40,22 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 	 *  'force': Remove the dropdown box.
 	 */
 	private $usernameOrgMethod;
+
+	/**
+	 * Storage for authsource config option remember.username.enabled
+	 * loginuserpass.php and loginuserpassorg.php pages/templates use this option to
+	 * present users with a checkbox to save their username for the next login request.
+	 * @var bool
+	 */
+	protected $rememberUsernameEnabled = FALSE;
+
+	/**
+	 * Storage for authsource config option remember.username.checked
+	 * loginuserpass.php and loginuserpassorg.php pages/templates use this option
+	 * to default the remember username checkbox to checked or not.
+	 * @var bool
+	 */
+	protected $rememberUsernameChecked = FALSE;
 
 
 	/**
@@ -50,8 +71,18 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 		assert('is_array($info)');
 		assert('is_array($config)');
 
-		/* Call the parent constructor first, as required by the interface. */
+		// Call the parent constructor first, as required by the interface
 		parent::__construct($info, $config);
+
+		// Get the remember username config options
+		if (isset($config['remember.username.enabled'])) {
+			$this->rememberUsernameEnabled = (bool) $config['remember.username.enabled'];
+			unset($config['remember.username.enabled']);
+		}
+		if (isset($config['remember.username.checked'])) {
+			$this->rememberUsernameChecked = (bool) $config['remember.username.checked'];
+			unset($config['remember.username.checked']);
+		}
 
 		$this->usernameOrgMethod = 'none';
 	}
@@ -90,6 +121,22 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 		return $this->usernameOrgMethod;
 	}
 
+	/**
+	 * Getter for the authsource config option remember.username.enabled
+	 * @return bool
+	 */
+	public function getRememberUsernameEnabled() {
+		return $this->rememberUsernameEnabled;
+	}
+
+	/**
+	 * Getter for the authsource config option remember.username.checked
+	 * @return bool
+	 */
+	public function getRememberUsernameChecked() {
+		return $this->rememberUsernameChecked;
+	}
+
 
 	/**
 	 * Initialize login.
@@ -102,14 +149,14 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 	public function authenticate(&$state) {
 		assert('is_array($state)');
 
-		/* We are going to need the authId in order to retrieve this authentication source later. */
+		// We are going to need the authId in order to retrieve this authentication source later
 		$state[self::AUTHID] = $this->authId;
 
 		$id = SimpleSAML_Auth_State::saveState($state, self::STAGEID);
 
-		$url = SimpleSAML_Module::getModuleURL('core/loginuserpassorg.php');
+		$url = SimpleSAML\Module::getModuleURL('core/loginuserpassorg.php');
 		$params = array('AuthState' => $id);
-		SimpleSAML_Utilities::redirect($url, $params);
+		\SimpleSAML\Utils\HTTP::redirectTrustedURL($url, $params);
 	}
 
 
@@ -148,14 +195,12 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 	 *
 	 * This function is used by the login form (core/www/loginuserpassorg.php) when the user
 	 * enters a username and password. On success, it will not return. On wrong
-	 * username/password failure, it will return the error code. Other failures will throw an
-	 * exception.
+	 * username/password failure, and other errors, it will throw an exception.
 	 *
 	 * @param string $authStateId  The identifier of the authentication state.
 	 * @param string $username  The username the user wrote.
 	 * @param string $password  The password the user wrote.
 	 * @param string $organization  The id of the organization the user chose.
-	 * @return string Error code in the case of an error.
 	 */
 	public static function handleLogin($authStateId, $username, $password, $organization) {
 		assert('is_string($authStateId)');
@@ -182,17 +227,17 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 			} else {
 				if ($orgMethod === 'force') {
 					/* The organization should be a part of the username, but isn't. */
-					return 'WRONGUSERPASS';
+					throw new SimpleSAML_Error_Error('WRONGUSERPASS');
 				}
 			}
 		}
 
-		try {
-			/* Attempt to log in. */
-			$attributes = $source->login($username, $password, $organization);
-		} catch (SimpleSAML_Error_Error $e) {
-			return $e->getErrorCode();
-		}
+		/* Attempt to log in. */
+		$attributes = $source->login($username, $password, $organization);
+
+		// Add the selected Org to the state
+		$state[self::ORGID] = $organization;
+		$state['PersistentAuthData'][] = self::ORGID;
 
 		$state['Attributes'] = $attributes;
 		SimpleSAML_Auth_Source::completeAuth($state);
@@ -229,5 +274,3 @@ abstract class sspmod_core_Auth_UserPassOrgBase extends SimpleSAML_Auth_Source {
 		return $source->getOrganizations();
 	}
 }
-
-?>
