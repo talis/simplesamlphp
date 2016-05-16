@@ -6,8 +6,7 @@
  * See the ldap-entry in config-templates/authsources.php for information about
  * configuration of these options.
  *
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class sspmod_ldap_ConfigHelper {
 
@@ -46,6 +45,18 @@ class sspmod_ldap_ConfigHelper {
 	 */
 	private $timeout;
 
+	/**
+	 * The port used when accessing the LDAP server.
+	 *
+	 * @var int
+	 */
+	private $port;
+
+	/**
+	 * Whether to follow referrals
+	 */
+	private $referrals;
+
 
 	/**
 	 * Whether we need to search for the users DN.
@@ -70,6 +81,10 @@ class sspmod_ldap_ConfigHelper {
 	 */
 	private $searchBase;
 
+	/**
+	 * Additional LDAP filter fields for the search
+	 */
+	private $searchFilter;
 
 	/**
 	 * The attributes which should match the username.
@@ -119,13 +134,15 @@ class sspmod_ldap_ConfigHelper {
 
 		$this->location = $location;
 
-		/* Parse configuration. */
+		// Parse configuration
 		$config = SimpleSAML_Configuration::loadFromArray($config, $location);
 
 		$this->hostname = $config->getString('hostname');
 		$this->enableTLS = $config->getBoolean('enable_tls', FALSE);
 		$this->debug = $config->getBoolean('debug', FALSE);
 		$this->timeout = $config->getInteger('timeout', 0);
+		$this->port = $config->getInteger('port', 389);
+		$this->referrals = $config->getBoolean('referrals', TRUE);
 		$this->searchEnable = $config->getBoolean('search.enable', FALSE);
 		$this->privRead = $config->getBoolean('priv.read', FALSE);
 
@@ -136,13 +153,14 @@ class sspmod_ldap_ConfigHelper {
 			}
 
 			$this->searchBase = $config->getArrayizeString('search.base');
+			$this->searchFilter = $config->getString('search.filter',NULL);
 			$this->searchAttributes = $config->getArray('search.attributes');
 
 		} else {
 			$this->dnPattern = $config->getString('dnpattern');
 		}
 
-		/* Are privs needed to get to the attributes? */
+		// Are privs needed to get to the attributes?
 		if ($this->privRead) {
 			$this->privUsername = $config->getString('priv.username');
 			$this->privPassword = $config->getString('priv.password');
@@ -168,11 +186,11 @@ class sspmod_ldap_ConfigHelper {
 		assert('is_string($password)');
 
 		if (empty($password)) {
-			SimpleSAML_Logger::info($this->location . ': Login with empty password disallowed.');
+			SimpleSAML\Logger::info($this->location . ': Login with empty password disallowed.');
 			throw new SimpleSAML_Error_Error('WRONGUSERPASS');
 		}
 
-		$ldap = new SimpleSAML_Auth_LDAP($this->hostname, $this->enableTLS, $this->debug, $this->timeout);
+		$ldap = new SimpleSAML_Auth_LDAP($this->hostname, $this->enableTLS, $this->debug, $this->timeout, $this->port, $this->referrals);
 
 		if (!$this->searchEnable) {
 			$ldapusername = addcslashes($username, ',+"\\<>;*');
@@ -184,16 +202,16 @@ class sspmod_ldap_ConfigHelper {
 				}
 			}
 
-			$dn = $ldap->searchfordn($this->searchBase, $this->searchAttributes, $username, TRUE);
+			$dn = $ldap->searchfordn($this->searchBase, $this->searchAttributes, $username, TRUE, $this->searchFilter);
 			if ($dn === NULL) {
 				/* User not found with search. */
-				SimpleSAML_Logger::info($this->location . ': Unable to find users DN. username=\'' . $username . '\'');
+				SimpleSAML\Logger::info($this->location . ': Unable to find users DN. username=\'' . $username . '\'');
 				throw new SimpleSAML_Error_Error('WRONGUSERPASS');
 			}
 		}
 
 		if (!$ldap->bind($dn, $password, $sasl_args)) {
-			SimpleSAML_Logger::info($this->location . ': '. $username . ' failed to authenticate. DN=' . $dn);
+			SimpleSAML\Logger::info($this->location . ': '. $username . ' failed to authenticate. DN=' . $dn);
 			throw new SimpleSAML_Error_Error('WRONGUSERPASS');
 		}
 
@@ -239,10 +257,18 @@ class sspmod_ldap_ConfigHelper {
 		$ldap = new SimpleSAML_Auth_LDAP($this->hostname,
 			$this->enableTLS,
 			$this->debug,
-			$this->timeout);
+			$this->timeout,
+			$this->port,
+			$this->referrals);
 
 		if ($attribute == NULL)
 			$attribute = $this->searchAttributes;
+
+		if ($this->searchUsername !== NULL) {
+			if(!$ldap->bind($this->searchUsername, $this->searchPassword)) {
+				throw new Exception('Error authenticating using search username & password.');
+			}
+		}
 
 		return $ldap->searchfordn($this->searchBase, $attribute,
 			$value, $allowZeroHits);
@@ -255,7 +281,17 @@ class sspmod_ldap_ConfigHelper {
 		$ldap = new SimpleSAML_Auth_LDAP($this->hostname,
 			$this->enableTLS,
 			$this->debug,
-			$this->timeout);
+			$this->timeout,
+			$this->port,
+			$this->referrals);
+
+		/* Are privs needed to get the attributes? */
+		if ($this->privRead) {
+			/* Yes, rebind with privs */
+			if(!$ldap->bind($this->privUsername, $this->privPassword)) {
+				throw new Exception('Error authenticating using privileged DN & password.');
+			}
+		}
 
 		return $ldap->getAttributes($dn, $attributes);
 	}

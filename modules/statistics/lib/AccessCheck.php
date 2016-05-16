@@ -3,8 +3,7 @@
 /**
  * Class implementing the access checker function for the statistics module.
  *
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class sspmod_statistics_AccessCheck {
 
@@ -29,24 +28,24 @@ class sspmod_statistics_AccessCheck {
 			return;
 		}
 
-		if (SimpleSAML_Utilities::isAdmin()) {
+		if (SimpleSAML\Utils\Auth::isAdmin()) {
 			// User logged in as admin. OK.
-			SimpleSAML_Logger::debug('Statistics auth - logged in as admin, access granted');
+			SimpleSAML\Logger::debug('Statistics auth - logged in as admin, access granted');
 			return;
 		}
 
 		if (!isset($authsource)) {
 			// If authsource is not defined, init admin login.
-			SimpleSAML_Utilities::requireAdmin();
+            SimpleSAML\Utils\Auth::requireAdmin();
 		}
 
-		/* We are using an authsource for login. */
+		// We are using an authsource for login.
 
 		$as = new SimpleSAML_Auth_Simple($authsource);
 		$as->requireAuth();
 
 		// User logged in with auth source.
-		SimpleSAML_Logger::debug('Statistics auth - valid login with auth source [' . $authsource . ']');
+		SimpleSAML\Logger::debug('Statistics auth - valid login with auth source [' . $authsource . ']');
 
 		// Retrieving attributes
 		$attributes = $as->getAttributes();
@@ -58,24 +57,24 @@ class sspmod_statistics_AccessCheck {
 
 			// Check if userid is allowed access..
 			if (in_array($attributes[$useridattr][0], $allowedusers)) {
-				SimpleSAML_Logger::debug('Statistics auth - User granted access by user ID [' . $attributes[$useridattr][0] . ']');
+				SimpleSAML\Logger::debug('Statistics auth - User granted access by user ID [' . $attributes[$useridattr][0] . ']');
 				return;
 			}
-			SimpleSAML_Logger::debug('Statistics auth - User denied access by user ID [' . $attributes[$useridattr][0] . ']');
+			SimpleSAML\Logger::debug('Statistics auth - User denied access by user ID [' . $attributes[$useridattr][0] . ']');
 
 		} else {
-			SimpleSAML_Logger::debug('Statistics auth - no allowedUsers list.');
+			SimpleSAML\Logger::debug('Statistics auth - no allowedUsers list.');
 		}
 
 		if (!is_null($acl)) {
 			$acl = new sspmod_core_ACL($acl);
 			if ($acl->allows($attributes)) {
-				SimpleSAML_Logger::debug('Statistics auth - allowed access by ACL.');
+				SimpleSAML\Logger::debug('Statistics auth - allowed access by ACL.');
 				return;
 			}
-			SimpleSAML_Logger::debug('Statistics auth - denied access by ACL.');
+			SimpleSAML\Logger::debug('Statistics auth - denied access by ACL.');
 		} else {
-			SimpleSAML_Logger::debug('Statistics auth - no ACL configured.');
+			SimpleSAML\Logger::debug('Statistics auth - no ACL configured.');
 		}
 
 		throw new SimpleSAML_Error_Exception('Access denied to the current user.');

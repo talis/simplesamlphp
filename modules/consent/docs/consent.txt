@@ -12,7 +12,7 @@ It is recommended to run the consent module at the IdP, and configure the
 filter to run after all attribute mangling filters is completed, to show the 
 user the exact same attributes that are sent to the SP.
 
-  * [Read more about processing filters in simpleSAMLphp](simplesamlphp-authproc)
+  * [Read more about processing filters in SimpleSAMLphp](simplesamlphp-authproc)
 
 
 How to setup the consent module
@@ -35,7 +35,7 @@ consent module:
 	
     touch modules/consent/enable
 
-The simplest wayf to setup the consent module is to not use any storage at 
+The simplest way to setup the consent module is to not use any storage at 
 all. This means that the user will always be asked to give consent each time 
 the user logs in.
 
@@ -66,7 +66,7 @@ Example:
 
 ### Using a database as storage ###
 
-In order to use tha database backend storage, you first need to setup the
+In order to use a database backend storage, you first need to setup the
 database. 
 
 Here is the initialization SQL script:
@@ -89,7 +89,7 @@ The `consent:Database` backend storage has the following options
 :   Data Source Name must comply to the syntax for the PHP PDO layer.
 
 `username`
-:   Username for the database user to be used for the connectio.
+:   Username for the database user to be used for the connection.
 
 `password`
 :   Password for the database user used for the connection.
@@ -97,6 +97,9 @@ The `consent:Database` backend storage has the following options
 `table`
 :   Name of the table used for storing the consents. This option is optional
 and defaults to `consent`.
+
+`timeout`
+:   The number of seconds to wait for a connection to the database server. This option is optional. If unset, it uses the default from the database-driver.
 
 Example config using PostgreSQL database:
 
@@ -128,7 +131,7 @@ Options
 
 The following options can be used when configuring the Consent module
 
-`ìncludeValues`
+`includeValues`
 :   Boolean value that indicate whether the values of the attributes should be 
     used in calculating the unique hashes that identifies the consent. If 
     includeValues is set and the value of an attribute changes, then the 
@@ -136,19 +139,19 @@ The following options can be used when configuring the Consent module
 
 `checked`
 :   Boolean value that indicate whether the "Remember" consent checkbox is
-    checkd by default. This option is optional and defaults to FALSE. 
+    checked by default. This option is optional and defaults to FALSE. 
 
 `focus`
-:   Indicates whether the "Yes" or "No" button is in fucus by default. This
+:   Indicates whether the "Yes" or "No" button is in focus by default. This
     option is optional and can take the value 'yes' or 'no' as strings. If 
-    omitted neither will recive focus.
+    omitted neither will receive focus.
 
 `store`
 :   Configuration of the Consent storage backend. The store option is given in 
     the format <module>:<class> and refers to the class 
     sspmod_<module>_Consent_Store_<class>. The consent module comes with two 
     build in storages backends 'consnet:Cookie' and 'consent:Database'. See 
-    seperate section on setting up consent using different storage methods. 
+    separate section on setting up consent using different storage methods. 
     This option is optional. If option is not set, then the user is asked to 
     consent, but the consent is not saved.
 
@@ -157,11 +160,14 @@ The following options can be used when configuring the Consent module
     the attributes that should have it value hidden. Default behaviour is that 
     all attribute values are shown
 
+`showNoConsentAboutService`
+:   Whether we will show a link to more information about the service from the
+    no consent page. Defaults to `TRUE`.
 
 External options
 ----------------
 
-The following options can/ be set in other places in simpleSAMLphp
+The following options can/ be set in other places in SimpleSAMLphp
 
 `privacypolicy`
 :   This is an absolute URL for where an user can find a privacy policy for SP. 
@@ -184,20 +190,49 @@ The following options can/ be set in other places in simpleSAMLphp
 Disabling consent
 -----------------
 
-It is possible to disable consent for a given service. You can add an option
-in the matadata on the IdP, that will disable consent for det given service.
-Add 'consent.disable' array option and enter the entityids of the services,
-that you do not want consent for.
+Consent can be disabled either in the IdP metadata or in the SP metadata.
+To disable consent for one or more SPs for a given IdP, add the
+`consent.disable`-option to the IdP metadata. To disable consent for one or
+more IdPs for a given SP, add the `consent.disable`-option to the SP metadata.
 
-Example:
+### Examples ###
 
-    'consent.disable' => array(
-        'sp.example.com',
-        'sp2.example.com',
-        ...
+Disable consent for a given IdP:
+
+    $metadata['https://idp.example.org/'] = array(
+        [...],
+        'consent.disable' => TRUE,
+    );
+
+Disable consent for some SPs connected to a given IdP:
+
+    $metadata['https://idp.example.org/'] = array(
+        [...],
+        'consent.disable' => array(
+            'https://sp1.example.org/',
+            'https://sp2.example.org/',
+        ),
+    );
+
+
+Disable consent for a given SP:
+
+    $metadata['https://sp.example.org'] = array(
+        [...]
+        'consent.disable' => TRUE,
     ),
 
-   
+Disable consent for some IdPs for a given SP:
+
+    $metadata['https://sp.example.org'] = array(
+        [...]
+        'consent.disable' => array(
+            'https://idp1.example.org/',
+            'https://idp2.example.org/',
+        ),
+    ),
+
+
 Attribute presentation
 ----------------------
  
@@ -236,7 +271,7 @@ These values will be listed as an bullet list
         )
     )
 
-This array hawe two child array. These will be listed in two separate sub
+This array has two child arrays. These will be listed in two separate sub
 tables.
 
     Array (

@@ -8,8 +8,7 @@
  *
  * This class is based on www/auth/login.php.
  *
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class sspmod_ldap_Auth_Source_LDAPMulti extends sspmod_core_Auth_UserPassOrgBase {
 
@@ -39,7 +38,7 @@ class sspmod_ldap_Auth_Source_LDAPMulti extends sspmod_core_Auth_UserPassOrgBase
 		assert('is_array($info)');
 		assert('is_array($config)');
 
-		/* Call the parent constructor first, as required by the interface. */
+		// Call the parent constructor first, as required by the interface
 		parent::__construct($info, $config);
 
 		$cfgHelper = SimpleSAML_Configuration::loadFromArray($config,
@@ -95,8 +94,8 @@ class sspmod_ldap_Auth_Source_LDAPMulti extends sspmod_core_Auth_UserPassOrgBase
 		assert('is_string($org)');
 
 		if (!array_key_exists($org, $this->ldapOrgs)) {
-			/* The user has selected an organization which doesn't exist anymore. */
-			SimpleSAML_Logger::warning('Authentication source ' . var_export($this->authId, TRUE) .
+			// The user has selected an organization which doesn't exist anymore.
+			SimpleSAML\Logger::warning('Authentication source ' . var_export($this->authId, TRUE) .
 				': Organization seems to have disappeared while the user logged in.' .
 				' Organization was ' . var_export($org, TRUE));
 			throw new SimpleSAML_Error_Error('WRONGUSERPASS');
@@ -120,6 +119,3 @@ class sspmod_ldap_Auth_Source_LDAPMulti extends sspmod_core_Auth_UserPassOrgBase
 	}
 
 }
-
-
-?>

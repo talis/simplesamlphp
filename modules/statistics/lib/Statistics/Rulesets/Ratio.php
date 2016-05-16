@@ -1,8 +1,7 @@
 <?php
 /*
  * @author Andreas Åkre Solberg <andreas.solberg@uninett.no>
- * @package simpleSAMLphp
- * @version $Id: Ratio.php 1535 2009-06-23 08:15:13Z andreassolberg $
+ * @package SimpleSAMLphp
  */
 class sspmod_statistics_Statistics_Rulesets_Ratio extends sspmod_statistics_Statistics_Rulesets_BaseRule {
 

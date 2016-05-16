@@ -3,8 +3,7 @@
  * Config file for consentAdmin
  *
  * @author Jacob Christiansen, <jach@wayf.dk>
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 $config = array(
 	/*
@@ -20,13 +19,13 @@ $config = array(
 	// Hash attributes including values or not
 	'attributes.hash' => TRUE,
 
-	// Where to direct the user after logout.
+	// Where to direct the user after logout
     // REMEMBER to prefix with http:// otherwise the relaystate is only appended 
     // to saml2 logout URL
 	'returnURL' => 'http://www.wayf.dk',
 
     // Shows description of the services if set to true (defaults to true)
-    'showDesription' => true, 
+    'showDescription' => true,
 
     // Set authority
     'authority' => 'saml2',

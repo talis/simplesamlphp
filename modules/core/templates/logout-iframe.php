@@ -4,7 +4,6 @@ $id = $this->data['id'];
 $type = $this->data['type'];
 $from = $this->data['from'];
 $SPs = $this->data['SPs'];
-$timeout = $this->data['timeout'];
 
 $stateImage = array(
 	'unsupported' => '/' . $this->data['baseurlpath'] . 'resources/icons/silk/delete.png',
@@ -23,12 +22,18 @@ $stateText = array(
 );
 
 $spStatus = array();
+$spTimeout = array();
 $nFailed = 0;
 $nProgress = 0;
 foreach ($SPs as $assocId => $sp) {
 	assert('isset($sp["core:Logout-IFrame:State"])');
 	$state = $sp['core:Logout-IFrame:State'];
 	$spStatus[sha1($assocId)] = $state;
+	if (isset($sp['core:Logout-IFrame:Timeout'])) {
+		$spTimeout[sha1($assocId)] = $sp['core:Logout-IFrame:Timeout'] - time();
+	} else {
+		$spTimeout[sha1($assocId)] = 5;
+	}
 	if ($state === 'failed') {
 		$nFailed += 1;
 	} elseif ($state === 'inprogress') {
@@ -37,7 +42,7 @@ foreach ($SPs as $assocId => $sp) {
 }
 
 if ($from !== NULL) {
-	$from = $this->getTranslation($from);
+	$from = $this->getTranslator()->getPreferredTranslation($from);
 }
 
 
@@ -45,15 +50,13 @@ if (!isset($this->data['head'])) {
 	$this->data['head'] = '';
 }
 
-$this->data['head'] .= '<script type="text/javascript" src="/' . $this->data['baseurlpath'] . 'resources/jquery.js"></script>';
-
 $this->data['head'] .= '
 <script type="text/javascript" language="JavaScript">
 window.stateImage = ' . json_encode($stateImage) . ';
 window.stateText = ' . json_encode($stateText) . ';
 window.spStatus = ' . json_encode($spStatus) . ';
+window.spTimeout = ' . json_encode($spTimeout) . ';
 window.type = "' . $type . '";
-window.timeoutIn = ' . (string)($timeout - time()) . ';
 window.asyncURL = "logout-iframe.php?id=' . $id . '&type=async";
 </script>';
 
@@ -69,7 +72,10 @@ if ($type === 'embed') {
 } else {
 	$this->includeAtTemplateBase('includes/header.php');
 }
-
+?>
+<div id="wrap">
+  <div id="content">
+<?php
 if ($from !== NULL) {
 
 	echo('<div><img style="float: left; margin-right: 12px" src="/' . $this->data['baseurlpath'] . 'resources/icons/checkmark.48x48.png" alt="Successful logout" />');
@@ -93,7 +99,7 @@ echo '<table id="slostatustable">';
 
 foreach ($SPs AS $assocId => $sp) {
 	if (isset($sp['core:Logout-IFrame:Name'])) {
-		$spName = $this->getTranslation($sp['core:Logout-IFrame:Name']);
+		$spName = $this->getTranslator()->getPreferredTranslation($sp['core:Logout-IFrame:Name']);
 	} else {
 		$spName = $assocId;
 	}
@@ -135,12 +141,12 @@ if ($type === 'init') {
 <form id="startform" method="get" style="display:inline;" action="logout-iframe.php">
 <input type="hidden" name="id" value="<?php echo $id; ?>" />
 <input type="hidden" id="logout-type-selector" name="type" value="nojs" />
-<input type="submit" id="logout-all" name="ok" value="<?php echo $this->t('{logout:logout_all}'); ?>" />
+<button type="submit" id="logout-all" name="ok" class="btn"><?php echo $this->t('{logout:logout_all}'); ?></button>
 </form>
 
 <form method="get" style="display:inline;" action="logout-iframe-done.php">
 <input type="hidden" name="id" value="<?php echo $id; ?>" />
-<input type="submit" name="cancel" value="<?php echo $logoutCancelText; ?>" />
+<button type="submit" name="cancel" class="btn"><?php echo $logoutCancelText; ?></button>
 </form>
 
 </div>
@@ -160,9 +166,8 @@ echo('<img src="/' . $this->data['baseurlpath'] . 'resources/icons/experience/gt
 echo('<p>' . $this->t('{logout:failedsps}') . '</p>');
 echo('<form method="post" action="logout-iframe-done.php" id="failed-form" target="_top">');
 echo('<input type="hidden" name="id" value="' . $id . '" />');
-echo('<input type="submit" name="continue" value="' . $this->t('{logout:return}'). '" />');
+echo('<button type="submit" name="continue" class="btn">' . $this->t('{logout:return}'). '</button>');
 echo('</form>');
-
 echo('</div>');
 
 if ($nProgress == 0 && $nFailed == 0) {
@@ -174,7 +179,7 @@ echo('<p>' . $this->t('{logout:success}') . '</p>');
 ?>
 <form method="post" action="logout-iframe-done.php" id="done-form" target="_top">
 	<input type="hidden" name="id" value="<?php echo $id; ?>" />
-	<input type="submit" name="continue" value="<?php echo $this->t('{logout:return}'); ?>" />
+	<button type="submit" name="continue" class="btn"><?php echo $this->t('{logout:return}'); ?></button>
 </form>
 </div>
 
@@ -198,7 +203,10 @@ if ($type === 'js') {
 <?php
 }
 ?>
-
+  </div>
+  <!-- #content -->
+</div>
+<!-- #wrap -->
 <?php
 if ($type === 'embed') {
 	$this->includeAtTemplateBase('includes/footer-embed.php');

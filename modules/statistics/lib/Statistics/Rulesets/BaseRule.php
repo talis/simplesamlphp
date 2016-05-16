@@ -1,8 +1,7 @@
 <?php
 /*
  * @author Andreas Åkre Solberg <andreas.solberg@uninett.no>
- * @package simpleSAMLphp
- * @version $Id: BaseRule.php 1535 2009-06-23 08:15:13Z andreassolberg $
+ * @package SimpleSAMLphp
  */
 class sspmod_statistics_Statistics_Rulesets_BaseRule {
 
@@ -40,7 +39,6 @@ class sspmod_statistics_Statistics_Rulesets_BaseRule {
 			if (array_key_exists($tres, $this->available))
 				$available_times[$tres] = $tresconfig['name'];
 		}
-		// echo('<pre>'); print_r($available_times); exit;
 		return $available_times;
 	}
 
@@ -70,7 +68,7 @@ class sspmod_statistics_Statistics_Rulesets_BaseRule {
 		$timeresavailable = array_keys($this->available);
 		$timeres = $timeresavailable[0];
 
-		// Then check if the user have provided one that is valid.
+		// Then check if the user have provided one that is valid
 		if (in_array($preferTimeRes, $timeresavailable)) {
 			$timeres = $preferTimeRes;
 		}

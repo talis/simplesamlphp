@@ -2,7 +2,6 @@
 
 
 $config = SimpleSAML_Configuration::getInstance();
-$sconfig = SimpleSAML_Configuration::getConfig('config-sanitycheck.php');
 
 $info = array();
 $errors = array();
@@ -10,7 +9,7 @@ $hookinfo = array(
 	'info' => &$info, 
 	'errors' => &$errors,
 );
-SimpleSAML_Module::callHooks('sanitycheck', $hookinfo);
+SimpleSAML\Module::callHooks('sanitycheck', $hookinfo);
 
 
 if (isset($_REQUEST['output']) && $_REQUEST['output'] == 'text') {

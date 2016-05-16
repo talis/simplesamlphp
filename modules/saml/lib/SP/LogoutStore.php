@@ -3,8 +3,7 @@
 /**
  * A directory over logout information.
  *
- * @package simpleSAMLphp
- * @version $Id$
+ * @package SimpleSAMLphp
  */
 class sspmod_saml_SP_LogoutStore {
 
@@ -46,7 +45,7 @@ class sspmod_saml_SP_LogoutStore {
 	 */
 	private static function cleanLogoutStore(SimpleSAML_Store_SQL $store) {
 
-		SimpleSAML_Logger::debug('saml.LogoutStore: Cleaning logout store.');
+		SimpleSAML\Logger::debug('saml.LogoutStore: Cleaning logout store.');
 
 		$query = 'DELETE FROM ' . $store->prefix . '_saml_LogoutStore WHERE _expire < :now';
 		$params = array('now' => gmdate('Y-m-d H:i:s'));
@@ -108,14 +107,15 @@ class sspmod_saml_SP_LogoutStore {
 			'now' => gmdate('Y-m-d H:i:s'),
 		);
 
-		$query = 'SELECT _sessionIndex, _sessionId FROM ' . $store->prefix . '_saml_LogoutStore' .
+		// We request the columns in lowercase in order to be compatible with PostgreSQL
+		$query = 'SELECT _sessionIndex AS _sessionindex, _sessionId AS _sessionid FROM ' . $store->prefix . '_saml_LogoutStore' .
 			' WHERE _authSource = :_authSource AND _nameId = :_nameId AND _expire >= :now';
 		$query = $store->pdo->prepare($query);
 		$query->execute($params);
 
 		$res = array();
 		while ( ($row = $query->fetch(PDO::FETCH_ASSOC)) !== FALSE) {
-			$res[$row['_sessionIndex']] = $row['_sessionId'];
+			$res[$row['_sessionindex']] = $row['_sessionid'];
 		}
 
 		return $res;
@@ -125,7 +125,7 @@ class sspmod_saml_SP_LogoutStore {
 	/**
 	 * Retrieve all session IDs from a key-value store.
 	 *
-	 * @param SimpleSAML_Store_SQL $store  The datastore.
+	 * @param SimpleSAML_Store $store  The datastore.
 	 * @param string $authId  The authsource ID.
 	 * @param string $nameId  The hash of the users NameID.
 	 * @param array $sessionIndexes  The session indexes.
@@ -167,12 +167,12 @@ class sspmod_saml_SP_LogoutStore {
 			 * it supports SLO, but we don't want an LogoutRequest with a specific
 			 * SessionIndex to match this session. We therefore generate our own session index.
 			 */
-			$sessionIndex = SimpleSAML_Utilities::generateID();
+			$sessionIndex = SimpleSAML\Utils\Random::generateID();
 		}
 
 		$store = SimpleSAML_Store::getInstance();
 		if ($store === FALSE) {
-			/* We don't have a datastore. */
+			// We don't have a datastore.
 			return;
 		}
 
@@ -186,7 +186,7 @@ class sspmod_saml_SP_LogoutStore {
 			$sessionIndex = sha1($sessionIndex);
 		}
 
-		$session = SimpleSAML_Session::getInstance();
+		$session = SimpleSAML_Session::getSessionFromRequest();
 		$sessionId = $session->getSessionId();
 
 		if ($store instanceof SimpleSAML_Store_SQL) {
@@ -234,6 +234,7 @@ class sspmod_saml_SP_LogoutStore {
 			/* We cannot fetch all sessions without a SQL store. */
 			return FALSE;
 		} else {
+			/** @var SimpleSAML_Store $sessions At this point the store cannot be false */
 			$sessions = self::getSessionsStore($store, $authId, $strNameId, $sessionIndexes);
 
 		}
@@ -247,7 +248,7 @@ class sspmod_saml_SP_LogoutStore {
 		$numLoggedOut = 0;
 		foreach ($sessionIndexes as $sessionIndex) {
 			if (!isset($sessions[$sessionIndex])) {
-				SimpleSAML_Logger::info('saml.LogoutStore: Logout requested for unknown SessionIndex.');
+				SimpleSAML\Logger::info('saml.LogoutStore: Logout requested for unknown SessionIndex.');
 				continue;
 			}
 
@@ -255,16 +256,16 @@ class sspmod_saml_SP_LogoutStore {
 
 			$session = SimpleSAML_Session::getSession($sessionId);
 			if ($session === NULL) {
-				SimpleSAML_Logger::info('saml.LogoutStore: Skipping logout of missing session.');
+				SimpleSAML\Logger::info('saml.LogoutStore: Skipping logout of missing session.');
 				continue;
 			}
 
 			if (!$session->isValid($authId)) {
-				SimpleSAML_Logger::info('saml.LogoutStore: Skipping logout of session because it isn\'t authenticated.');
+				SimpleSAML\Logger::info('saml.LogoutStore: Skipping logout of session because it isn\'t authenticated.');
 				continue;
 			}
 
-			SimpleSAML_Logger::info('saml.LogoutStore: Logging out of session with trackId [' . $session->getTrackId() . '].');
+			SimpleSAML\Logger::info('saml.LogoutStore: Logging out of session with trackId [' . $session->getTrackID() . '].');
 			$session->doLogout($authId);
 			$numLoggedOut += 1;
 		}

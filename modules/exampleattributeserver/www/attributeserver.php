@@ -19,10 +19,10 @@ if ($spEntityId === NULL) {
 $idpMetadata = $metadata->getMetadataConfig($idpEntityId, 'saml20-idp-hosted');
 $spMetadata = $metadata->getMetaDataConfig($spEntityId, 'saml20-sp-remote');
 
-/* The endpoint we should deliver the message to. */
+// The endpoint we should deliver the message to
 $endpoint = $spMetadata->getString('testAttributeEndpoint');
 
-/* The attributes we will return. */
+// The attributes we will return
 $attributes = array(
 	'name' => array('value1', 'value2', 'value3'),
 	'test' => array('test'),
@@ -35,11 +35,11 @@ $attributeNameFormat = SAML2_Const::NAMEFORMAT_UNSPECIFIED;
 /* Determine which attributes we will return. */
 $returnAttributes = array_keys($query->getAttributes());
 if (count($returnAttributes) === 0) {
-	SimpleSAML_Logger::debug('No attributes requested - return all attributes.');
+	SimpleSAML\Logger::debug('No attributes requested - return all attributes.');
 	$returnAttributes = $attributes;
 
 } elseif ($query->getAttributeNameFormat() !== $attributeNameFormat) {
-	SimpleSAML_Logger::debug('Requested attributes with wrong NameFormat - no attributes returned.');
+	SimpleSAML\Logger::debug('Requested attributes with wrong NameFormat - no attributes returned.');
 	$returnAttributes = array();
 } else {
 	foreach ($returnAttributes as $name => $values) {
